@@ -136,6 +136,36 @@ async def add_client(RiZoeL: Client, message: Message):
     except Exception as er:
         await message.reply(f"**❎ Error:** {str(er)} \n\n __Report in @{TheBadX.supportGroup}__")
     await checking.delete()
+
+@Client.on_message(
+    filters.private & filters.command("addbot")
+)
+async def add_bot_client(RiZoeL: Client, message: Message):
+    if await TheBadX.sudo.sudoFilter(message):
+        return
+    try:
+        bot_token = message.command[1]
+    except IndexError:
+        await message.reply("__Invalid! Please provide a bot token.__")
+        return
+
+    checking = await message.reply("__checking...__")
+
+    BadXBot = Client(
+        f"BadXBot-{bot_token[:10]}",
+        api_id=API_ID,
+        api_hash=API_HASH,
+        bot_token=bot_token,
+        plugins=dict(root="BadX.module2")
+    )
+    try:
+        await BadXBot.start()
+        TheBadX.clients.append(BadXBot)
+        TheBadX.database.addSession(BadXBot.me.id, bot_token)
+        await message.reply(f"**✅ Wew, Bot {BadXBot.me.mention} Started**")
+    except Exception as er:
+        await message.reply(f"**❎ Error:** {str(er)} \n\n __Report in @{TheBadX.supportGroup}__")
+    await checking.delete()
     
 @Client.on_message(filters.private & filters.command("login"))
 async def get_otp_for_user(_, message: Message):
@@ -189,6 +219,11 @@ async def get_otp_for_user(_, message: Message):
 async def session_add(_, message: Message):
     await message.reply_text("/add {ᴘᴀsᴛᴇ ʏᴏᴜʀ ᴘʏ2 sᴇssɪᴏɴ} ✓ ❤️")
 
+@Client.on_message(
+    filters.regex("➕ Add Bot Client") & filters.private  # & filters.user(TheBadX.sudo.sudoUsers)
+)
+async def session_add(_, message: Message):
+    await message.reply_text("/addbot {ᴘᴀsᴛᴇ ʏᴏᴜʀ ʙᴏᴛ ᴛᴏᴋᴇɴ} ✓ ❤️")
 
 @Client.on_message(
     filters.regex("Remove Client ➖") & filters.private  # & filters.user(TheBadX.sudo.sudoUsers)
@@ -357,6 +392,145 @@ async def clientCallbacks(_, callback: CallbackQuery):
                     [
                         [
                             InlineKeyboardButton("🔙", "client:back:delete")
+                        ]
+                    ]
+                ),
+            )
+            await callback.message.delete()
+    
+@Client.on_message(
+    filters.regex("Remove Bot Client ➖") & filters.private  # & filters.user(TheBadX.sudo.sudoUsers)
+)
+async def remove_bot_client(_, message: Message):
+    if await TheBadX.sudo.sudoFilter(message, 1):
+        return
+    if len(TheBadX.clients) == 0:
+        await message.reply_text("❎ No bot clients found in Database.")
+        return
+
+    process = await message.reply("__processing....__", reply_markup=ReplyKeyboardRemove())
+
+    collection = []
+    clientNo = 0
+    for client in TheBadX.clients:
+        if client.me.is_bot:
+            collection.append((f"Bot: {client.me.id}", f"botclient:delete:{client.me.id}:{clientNo}"))
+        clientNo += 1
+
+    buttons = gen_inline_keyboard(collection, 2)
+    buttons.append([InlineKeyboardButton("Cancel ❌", "auth_close")])
+
+    await message.reply_text(
+        "**▪️ Choose Bot Client to remove:**",
+        reply_markup=InlineKeyboardMarkup(buttons),
+    )
+    await process.delete()
+
+@Client.on_callback_query(filters.regex("botclient:.*$"))
+async def botClientCallbacks(_, callback: CallbackQuery):
+    if await TheBadX.sudo.sudoFilter(callback.message, 1, callback.from_user.id):
+        await callback.message.delete()
+        return
+
+    if callback.data.split(":")[1] == "close":
+        await callback.message.delete()
+        return
+
+    if callback.data.split(":")[1] == "back":
+        await callback.answer("processing.....", show_alert=True)
+        collection = []
+        clientNo = 0
+        if callback.data.split(':')[2].lower() == "access":
+            for client in TheBadX.clients:
+                if client.me.is_bot:
+                    collection.append((f"Bot: {client.me.id}", f"botclient:access:{client.me.id}:{clientNo}"))
+                    clientNo += 1
+
+        elif callback.data.split(':')[2].lower() == "delete":
+            for client in TheBadX.clients:
+                if client.me.is_bot:
+                    collection.append((f"Bot: {client.me.id}", f"botclient:delete:{client.me.id}:{clientNo}"))
+                clientNo += 1
+
+        buttons = gen_inline_keyboard(collection, 2)
+        buttons.append([InlineKeyboardButton("Cancel ❌", "client:close")])
+
+        try:
+            await callback.message.edit(
+                f"**Choose Bot Client to {callback.data.split(':')[2]}:**",
+                reply_markup=InlineKeyboardMarkup(buttons),
+            )
+        except:
+            await callback.message.reply_text(
+                f"**Choose Bot Client to {callback.data.split(':')[2]}:**",
+                reply_markup=InlineKeyboardMarkup(buttons),
+            )
+            await callback.message.delete()
+        return
+
+    query = callback.data.split(":")
+    func = str(query[1].lower())
+    bot_id = int(query[2].lower())
+    client_number = int(query[3].lower())
+    if func == "delete":
+        try:
+            await callback.message.edit(
+                f"**Please confirm that you want to remove {TheBadX.clients[client_number].me.mention} ({bot_id}) from DB**",
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton("✅ Yes", f"botclient:remove:{bot_id}:{client_number}"),
+                            InlineKeyboardButton("No ❎", "client:close")
+                        ],
+                        [
+                            InlineKeyboardButton("🔙", "botclient:back:delete")
+                        ]
+                    ]
+                )
+            )
+        except:
+            await callback.message.reply(
+                f"**Please confirm that you want to remove {TheBadX.clients[client_number].me.mention} ({bot_id}) from DB**",
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton("✅ Yes", f"botclient:remove:{bot_id}:{client_number}"),
+                            InlineKeyboardButton("No ❎", "client:close")
+                        ],
+                        [
+                            InlineKeyboardButton("🔙", "botclient:back:delete")
+                        ]
+                    ]
+                )
+            )
+            await callback.message.delete()
+
+    elif func == "remove":
+        await callback.answer("removing...", show_alert=True)
+        await callback.message.edit("__removing__")
+        client = TheBadX.clients[client_number]
+        await client.stop()
+        client_mention = client.me.mention
+        TheBadX.clients.remove(client)
+
+        try:
+            await callback.message.edit(
+                f"**Removed {client_mention} from DB**",
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton("🔙", "botclient:back:delete")
+                        ]
+                    ]
+                ),
+            )
+        except:
+            await callback.message.reply_text(
+                f"**Removed {client_mention} from DB**",
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton("🔙", "botclient:back:delete")
                         ]
                     ]
                 ),
