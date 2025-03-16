@@ -19,7 +19,7 @@ version = {
 }
 
 UpdateChannel = "HEROKUBIN_01"
-SupportGroup = "ll_THE_BAD_BOT_ll"
+SupportGroup = "PBX_CHAT"
 
 activeTasks: dict = {}
 dataBase = dataBase
