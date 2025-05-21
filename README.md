@@ -33,7 +33,7 @@ sudo apt install screen```
 <b>3) clone repo and open dictionary </b>
 
 ```python
-git clone https://github.com/Badhacker98/Spam_X_bot && cd Spam_X_bot```
+git clone https://github.com/GDNBHARATH448/Cpu/tree/main &&cd spam bot ```
 
 <b>4) Install requirements </b>
 
